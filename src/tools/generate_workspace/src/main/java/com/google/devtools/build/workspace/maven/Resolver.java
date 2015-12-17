@@ -54,6 +54,7 @@ import java.util.Set;
  */
 public class Resolver {
   private static final String COMPILE_SCOPE = "compile";
+  private static final String TEST_SCOPE = "test";
 
   private final EventHandler handler;
   private final DefaultModelBuilder modelBuilder;
@@ -97,6 +98,9 @@ public class Resolver {
       outputStream.println("java_library(");
       outputStream.println("    name = \"" + rule.name() + "\",");
       outputStream.println("    visibility = [\"//visibility:public\"],");
+      if (rule.isTestScope()) {
+        outputStream.println("    testonly = 1,");
+      }
       outputStream.println("    exports = [");
       outputStream.println("        \"@" + rule.name() + "//jar\",");
       for (Rule r : rule.getDependencies()) {
@@ -166,8 +170,12 @@ public class Resolver {
     }
 
     for (org.apache.maven.model.Dependency dependency : model.getDependencies()) {
-      if (!dependency.getScope().equals(COMPILE_SCOPE)) {
-        continue;
+      if (!Rule.COMPILE_SCOPE.equalsIgnoreCase(dependency.getScope())) {
+        // Skip test scope dependencies unless we have no parent rule. These
+        // are dependencies referenced in our parsed pom.xml file.
+        if (parent != null || !Rule.TEST_SCOPE.equalsIgnoreCase(dependency.getScope())) {
+          continue;
+        }
       }
       if (dependency.isOptional()) {
         continue;
