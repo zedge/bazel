@@ -133,7 +133,16 @@ public final class Rule implements Comparable<Rule> {
         HttpURLConnection connection = (HttpURLConnection) new URL(jarSha1Url).openConnection();
         connection.setInstanceFollowRedirects(true);
         connection.connect();
-        this.sha1 = CharStreams.toString(new InputStreamReader(connection.getInputStream()));
+        this.sha1 = CharStreams.toString(new InputStreamReader(connection.getInputStream())).trim();
+        if (this.sha1.contains(" ") || this.sha1.contains("=") || this.sha1.contains("\t")) {
+          // Sha1 is always represented with a 40 character hex string.
+          for (String part : this.sha1.split("[ =\t]")) {
+            if (part.matches("[0-9a-fA-F]{40}")) {
+              this.sha1 = part;
+              break;
+            }
+          }
+        }
       } catch (IOException e) {
         handler.handle(Event.warn("Failed to download the sha1 at " + jarSha1Url));
       }
